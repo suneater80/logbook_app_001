@@ -10,6 +10,32 @@ class CounterView extends StatefulWidget {
 class _CounterViewState extends State<CounterView> {
   final CounterController _controller = CounterController();
 
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Konfirmasi Reset"),
+        content: const Text("Apakah Anda yakin ingin meriset semua hitungan?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _controller.reset());
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Nilai berhasil direset")),
+              );
+            },
+            child: const Text("Ya, Reset"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,9 +73,9 @@ class _CounterViewState extends State<CounterView> {
                   onPressed: () => setState(() => _controller.increment()),
                   child: const Icon(Icons.add),
                 ),
-                const SizedBox(width: 10), // Beri jarak antar tombol
+                const SizedBox(width: 10),  // Beri jarak antar tombol
                 ElevatedButton(
-                  onPressed: () => setState(() => _controller.reset()),
+                  onPressed: _showResetDialog, // Menggunakan Dialog
                   child: const Icon(Icons.refresh),
                 ),
                 const SizedBox(width: 10),
@@ -67,10 +93,30 @@ class _CounterViewState extends State<CounterView> {
             // Menampilkan riwayat 
             Column(
               children: _controller.history.map((log) {
+
+                // Memisahkan String berdasarkan karakter '|'
+                final parts = log.split('|');
+                if (parts.length < 2) return const SizedBox(); // Jika format tidak sesuai, lewati log ini
+                final String type = parts[0];
+                final String message = parts[1];
+
+                // Menentukan warna
+                Color displayColor = Colors.grey;
+                if (type == "POS") displayColor = Colors.green;
+                if (type == "NEG") displayColor = Colors.red;
+
                 return Card(
                   child: ListTile(
-                    leading: const Icon(Icons.history),
-                    title: Text(log, style: const TextStyle(fontSize: 12)),
+                    // PASANG WARNA DI SINI
+                    leading: Icon(Icons.history, color: displayColor),
+                    title: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 12, 
+                        color: displayColor, // PASANG WARNA DI SINI
+                        fontWeight: FontWeight.w600
+                      ),
+                    ),
                   ),
                 );
               }).toList(),

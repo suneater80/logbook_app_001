@@ -16,12 +16,12 @@ class CounterController {
   }
 
   // Fungsi untuk menambah log history dan membatasi jumlahnya
-  void _addLog(String action) {
+  void _addLog(String action, String type) {
     // Mengambil waktu saat ini
-    String time = DateTime.now().toString().split('.')[0];
+    String time = DateTime.now().toString().split('.')[0].split(' ')[1];
     
     // Menambahkan catatan ke urutan paling atas
-    _history.insert(0, "$action (Step: $_step) pada $time");
+    _history.insert(0, "$type|$action pada jam $time");
 
     // Membatasi agar riwayat hanya menampilkan 5 aktivitas terakhir 
     if (_history.length > 5) {
@@ -32,22 +32,22 @@ class CounterController {
   // Fungsi-fungsi utama untuk Step dan Log
   void increment() {
     _counter += _step;
-    _addLog("Tambah +$_step");
+    _addLog("User menambah nilai sebesar $_step", "POS");
   }
 
   void decrement() {
     // Membatasi agar nilai tidak menjadi negatif
     if (_counter >= _step) {
       _counter -= _step;
-      _addLog("Kurang -$_step");
+      _addLog("User mengurangi nilai sebesar $_step", "NEG"); 
     } else {
       _counter = 0;
-      _addLog("Reset ke 0 (karena kurang dari step)");
+      _addLog("Reset ke 0", "NEG");
     }
   }
 
   void reset() {
     _counter = 0;
-    _addLog("Reset Angka");
+    _addLog("User melakukan reset nilai", "RESET");
   }
 }
