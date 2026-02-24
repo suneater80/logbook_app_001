@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'counter_view.dart';
+import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
+import 'package:logbook_app_001/features/auth/login_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +20,11 @@ class MyApp extends StatelessWidget {
           seedColor: const Color.fromARGB(255, 10, 225, 81),
         ),
       ),
-      home: const CounterView(),
+      home: const OnboardingView(),
+      routes: {
+        '/login': (context) => const LoginView(), // Ganti dengan LoginView nanti
+        
+      },
     );
   }
 }
