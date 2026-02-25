@@ -12,6 +12,30 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
+
+  // Fungsi greeting berdasarkan waktu
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 6 && hour < 11) {
+      return 'Selamat Pagi';
+    } else if (hour >= 11 && hour < 15) {
+      return 'Selamat Siang';
+    } else if (hour >= 15 && hour < 18) {
+      return 'Selamat Sore';
+    } else {
+      return 'Selamat Malam';
+    }
+  }
+
+  String _getSubtitle() {
+    final hour = DateTime.now().hour;
+    if (hour >= 6 && hour < 11) return 'awali hari dengan bismillah';
+    if (hour >= 11 && hour < 15) return 'bobo siang yuk';
+    if (hour >= 15 && hour < 18) return 'nyari takjil gass';
+    return 'Selamat beristirahat bro/sis!';
+  }
+
   late final CounterController _controller;
   bool _isLoading = true; // Menambahkan state untuk loading
 
@@ -141,7 +165,41 @@ class _CounterViewState extends State<CounterView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Selamat Datang, ${widget.username}🙂‍↕️"),
+
+            //welcome banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Colors.blue, Colors.lightBlueAccent],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_getGreeting()}, ${widget.username}! 🙂‍↕️',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _getSubtitle(),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const Text("Total Hitungan:"),
             Text('${_controller.value}', style: const TextStyle(fontSize: 40)),
 
