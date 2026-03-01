@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logbook_app_001/features/logbook/counter_controller.dart';
+import 'package:logbook_app_001/features/logbook/log_view.dart';
 import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
 
 class CounterView extends StatefulWidget {
@@ -12,7 +13,6 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
-
   // Fungsi greeting berdasarkan waktu
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -47,7 +47,9 @@ class _CounterViewState extends State<CounterView> {
   }
 
   Future<void> _initCounter() async {
-    await _controller.loadCounter(widget.username); // Memuat nilai counter berdasarkan username
+    await _controller.loadCounter(
+      widget.username,
+    ); // Memuat nilai counter berdasarkan username
     if (!mounted) return;
     setState(() {
       _isLoading = false; // Setelah data dimuat, set loading ke false
@@ -57,13 +59,17 @@ class _CounterViewState extends State<CounterView> {
   Future<void> _onIncrement() async {
     await _controller.increment(widget.username);
     if (!mounted) return;
-    setState(() {}); // Memanggil setState untuk memperbarui UI setelah increment
+    setState(
+      () {},
+    ); // Memanggil setState untuk memperbarui UI setelah increment
   }
 
   Future<void> _onDecrement() async {
     await _controller.decrement(widget.username);
     if (!mounted) return;
-    setState(() {}); // Memanggil setState untuk memperbarui UI setelah decrement
+    setState(
+      () {},
+    ); // Memanggil setState untuk memperbarui UI setelah decrement
   }
 
   Future<void> _onReset() async {
@@ -102,9 +108,7 @@ class _CounterViewState extends State<CounterView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -112,6 +116,16 @@ class _CounterViewState extends State<CounterView> {
         title: Text("LogBook: ${widget.username}"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.note_alt_outlined),
+            tooltip: 'Buka Log CRUD',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LogView()),
+              );
+            },
+          ),
           IconButton(
             // Logout
             icon: const Icon(Icons.logout),
@@ -165,7 +179,6 @@ class _CounterViewState extends State<CounterView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             //welcome banner
             Container(
               width: double.infinity,
@@ -191,10 +204,7 @@ class _CounterViewState extends State<CounterView> {
                   const SizedBox(height: 4),
                   Text(
                     _getSubtitle(),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.white70),
                   ),
                 ],
               ),
@@ -225,8 +235,8 @@ class _CounterViewState extends State<CounterView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ElevatedButton(// Menggunakan ElevatedButton agar lebih pas di dalam Column
-                  
+                ElevatedButton(
+                  // Menggunakan ElevatedButton agar lebih pas di dalam Column
                   onPressed: _onIncrement, // Memanggil fungsi increment
                   child: const Icon(Icons.add),
                 ),
@@ -237,7 +247,7 @@ class _CounterViewState extends State<CounterView> {
                   child: const Icon(Icons.refresh),
                 ),
                 const SizedBox(width: 10),
-                
+
                 ElevatedButton(
                   onPressed: _onDecrement, // Memanggil fungsi decrement
                   child: const Icon(Icons.remove),
