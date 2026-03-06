@@ -1,8 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
+import 'package:logbook_app_001/helpers/mongo_service.dart';
+import 'package:logbook_app_001/helpers/log_helper.dart';
 
-void main() {
+void main() async {
+  // Wajib untuk operasi asinkron sebelum runApp
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load ENV
+  await dotenv.load(fileName: ".env");
+  LogHelper.info('App', 'Environment variables loaded');
+
+  // Inisialisasi MongoDB (Skip untuk Web Platform)
+  if (!kIsWeb) {
+    try {
+      await MongoService.instance.init();
+      LogHelper.success('App', 'MongoDB berhasil diinisialisasi');
+    } catch (e) {
+      LogHelper.error(
+        'App',
+        'Gagal inisialisasi MongoDB',
+        e,
+        StackTrace.current,
+      );
+      // App tetap jalan, tapi tanpa koneksi cloud
+    }
+  } else {
+    LogHelper.warning(
+      'App',
+      'Running on Web - MongoDB disabled, using local storage only',
+    );
+  }
+
   runApp(const MyApp());
 }
 
@@ -13,28 +45,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Logbook App',
       theme: ThemeData(
-
-        colorScheme: .fromSeed(
+        colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromARGB(255, 10, 225, 81),
         ),
       ),
       home: const OnboardingView(),
-      routes: {
-        '/login': (context) => const LoginView(), // Ganti dengan LoginView nanti
-        
-      },
+      routes: {'/login': (context) => const LoginView()},
     );
   }
 }
-
-
-
-
-
-
-
 
 // class MyHomePage extends StatefulWidget {
 //   const MyHomePage({super.key, required this.title});
