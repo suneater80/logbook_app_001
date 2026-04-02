@@ -13,48 +13,52 @@ void main() {
       });
     }
 
-    test('TC01 - onboarding data should store first slide information correctly', () {
-      final data = OnboardingData(
-        image: 'assets/images/onboarding1.png',
-        title: 'Selamat Datang',
-        description:
-            'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
-      );
+    test(
+      'TC01 - onboarding data should store first slide information correctly',
+      () {
+        final data = OnboardingData(
+          image: 'assets/images/onboarding1.png',
+          title: 'Selamat Datang',
+          description:
+              'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
+        );
 
-      expect(data.image, 'assets/images/onboarding1.png');
-      expect(data.title, 'Selamat Datang');
-      expect(
-        data.description,
-        'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
-      );
-    });
+        expect(data.image, 'assets/images/onboarding1.png');
+        expect(data.title, 'Selamat Datang');
+        expect(
+          data.description,
+          'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
+        );
+      },
+    );
 
-    testWidgets('TC02 - onboarding first page should show welcome title', (tester) async {
+    testWidgets('TC02 - onboarding first page should show welcome title', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       expect(find.text('Selamat Datang'), findsOneWidget);
     });
 
-    testWidgets('TC03 - onboarding first page should show Skip and Next buttons', (tester) async {
-      await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'TC03 - onboarding first page should show Skip and Next buttons',
+      (tester) async {
+        await prepareViewport(tester);
+        await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Skip'), findsOneWidget);
-      expect(find.text('Next'), findsOneWidget);
-    });
+        expect(find.text('Skip'), findsOneWidget);
+        expect(find.text('Next'), findsOneWidget);
+      },
+    );
 
-    testWidgets('TC04 - pressing Next should move to second page', (tester) async {
+    testWidgets('TC04 - pressing Next should move to second page', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Next'));
@@ -63,11 +67,11 @@ void main() {
       expect(find.text('Kelola Counter'), findsOneWidget);
     });
 
-    testWidgets('TC05 - pressing Next again should move to third page', (tester) async {
+    testWidgets('TC05 - pressing Next again should move to third page', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Next'));
@@ -78,11 +82,11 @@ void main() {
       expect(find.text('Pantau Riwayat'), findsOneWidget);
     });
 
-    testWidgets('TC06 - last page button should change to Get Started', (tester) async {
+    testWidgets('TC06 - last page button should change to Get Started', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Next'));
@@ -93,11 +97,11 @@ void main() {
       expect(find.text('Get Started'), findsOneWidget);
     });
 
-    testWidgets('TC07 - pressing Skip should jump to last page', (tester) async {
+    testWidgets('TC07 - pressing Skip should jump to last page', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skip'));
@@ -106,11 +110,11 @@ void main() {
       expect(find.text('Pantau Riwayat'), findsOneWidget);
     });
 
-    testWidgets('TC08 - pressing Get Started should navigate to LoginView', (tester) async {
+    testWidgets('TC08 - pressing Get Started should navigate to LoginView', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skip'));
@@ -122,24 +126,25 @@ void main() {
       expect(find.text('Login Gatekeeper'), findsOneWidget);
     });
 
-    testWidgets('TC09 - swiping left should move to the second onboarding page', (tester) async {
+    testWidgets(
+      'TC09 - swiping left should move to the second onboarding page',
+      (tester) async {
+        await prepareViewport(tester);
+        await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
+        await tester.pumpAndSettle();
+
+        await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Kelola Counter'), findsOneWidget);
+      },
+    );
+
+    testWidgets('TC10 - onboarding screen should show page indicator', (
+      tester,
+    ) async {
       await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Kelola Counter'), findsOneWidget);
-    });
-
-    testWidgets('TC10 - onboarding screen should show page indicator', (tester) async {
-      await prepareViewport(tester);
-      await tester.pumpWidget(
-        const MaterialApp(home: OnboardingView()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: OnboardingView()));
       await tester.pumpAndSettle();
 
       expect(find.byType(SmoothPageIndicator), findsOneWidget);
