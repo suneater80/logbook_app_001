@@ -52,7 +52,7 @@ class LogModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id?.toHexString(),
+      'id': id?.oid,
       'title': title,
       'description': description,
       'timestamp': timestamp.toIso8601String(),

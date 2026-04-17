@@ -1,4 +1,5 @@
 {
     "cmake.sourceDirectory": "D:/Projects/Flutter/logbook_app_001/linux",
-    "dart.flutterSdkPath": "D:\\Tools\\flutter"
+    "dart.flutterSdkPath": "D:\\Tools\\flutter",
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

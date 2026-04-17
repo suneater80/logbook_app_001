@@ -22,33 +22,24 @@ class LogHelper {
       // 2. Format Waktu untuk Konsol
       String timestamp = DateFormat('HH:mm:ss').format(now);
       String label = _getLabel(level);
-      String color = _getColor(level);
 
       // 3. Output ke VS Code Debug Console (Non-blocking)
       dev.log(message, name: source, time: now, level: level * 100);
 
-      // 4. Output ke Terminal (Agar Bapak bisa lihat di PC saat flutter run)
-      // Format: [14:30:05] [INFO] [log_view.dart] -> Database Terhubung
-      print('$color[$timestamp][$label][$source] -> $message\x1B[0m');
+      // 4. Format human-readable untuk tersimpan rapi di file log
+      final formattedMessage = '[$timestamp][$label][$source] -> $message';
 
       // 5. Save to file: logs/dd-mm-yyyy.log
-      await _writeToFile(now, source, label, message);
+      await _writeToFile(now, formattedMessage);
     } catch (e) {
       dev.log("Logging failed: $e", name: "SYSTEM", level: 1000);
     }
   }
 
-  static Future<void> _writeToFile(
-    DateTime now,
-    String source,
-    String label,
-    String message,
-  ) async {
+  static Future<void> _writeToFile(DateTime now, String message) async {
     try {
       // Format nama file: dd-mm-yyyy.log
       String dateStr = DateFormat('dd-MM-yyyy').format(now);
-      String timeStr = DateFormat('HH:mm:ss').format(now);
-
       // Buat folder logs di root project
       final Directory logsDir = Directory('logs');
       if (!await logsDir.exists()) {
@@ -59,7 +50,7 @@ class LogHelper {
       final File logFile = File('logs/$dateStr.log');
 
       // Format log entry
-      final logEntry = '[$timeStr][$label][$source] -> $message\n';
+      final logEntry = '$message\n';
 
       // Append ke file (create if not exists)
       await logFile.writeAsString(logEntry, mode: FileMode.append);
@@ -82,19 +73,6 @@ class LogHelper {
     }
   }
 
-  static String _getColor(int level) {
-    switch (level) {
-      case 1:
-        return '\x1B[31m'; // Merah
-      case 2:
-        return '\x1B[32m'; // Hijau
-      case 3:
-        return '\x1B[34m'; // Biru
-      default:
-        return '\x1B[0m';
-    }
-  }
-
   // === Smart Logging Shortcuts untuk MongoDB Integration ===
 
   /// Log level INFO (hijau) - untuk informasi umum
@@ -105,17 +83,15 @@ class LogHelper {
   /// Log level SUCCESS (hijau terang) - untuk operasi berhasil
   static void success(String source, String message) {
     final timestamp = DateFormat('HH:mm:ss').format(DateTime.now());
-    const color = '\x1B[32m'; // Hijau
-    print('$color[$timestamp][SUCCESS][$source] -> $message\x1B[0m');
     dev.log(message, name: source, time: DateTime.now(), level: 200);
+    _writeToFile(DateTime.now(), '[$timestamp][SUCCESS][$source] -> $message');
   }
 
   /// Log level WARNING (kuning) - untuk peringatan
   static void warning(String source, String message) {
     final timestamp = DateFormat('HH:mm:ss').format(DateTime.now());
-    const color = '\x1B[33m'; // Kuning
-    print('$color[$timestamp][WARNING][$source] -> $message\x1B[0m');
     dev.log(message, name: source, time: DateTime.now(), level: 300);
+    _writeToFile(DateTime.now(), '[$timestamp][WARNING][$source] -> $message');
   }
 
   /// Log level ERROR (merah) - untuk error dengan stack trace
@@ -126,20 +102,18 @@ class LogHelper {
     StackTrace? stackTrace,
   ) {
     final timestamp = DateFormat('HH:mm:ss').format(DateTime.now());
-    const color = '\x1B[31m'; // Merah
-    print('$color[$timestamp][ERROR][$source] -> $message');
-    print('Error: $error');
-    if (stackTrace != null) {
-      print(
-        'StackTrace: ${stackTrace.toString().split('\n').take(5).join('\n')}\x1B[0m',
-      );
-    }
+    final stackPreview = stackTrace == null
+        ? ''
+        : '\nStackTrace: ${stackTrace.toString().split('\n').take(5).join('\n')}';
+    final fullMessage =
+        '[$timestamp][ERROR][$source] -> $message\nError: $error$stackPreview';
     dev.log(
-      '$message\nError: $error',
+      fullMessage,
       name: source,
       time: DateTime.now(),
       level: 1000,
       stackTrace: stackTrace,
     );
+    _writeToFile(DateTime.now(), fullMessage);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:developer' as dev;
 import 'log_helper.dart';
 
 class MongoService {
@@ -26,10 +27,19 @@ class MongoService {
   }
 
   Future<void> init() async {
+    return connect();
+  }
+
+  Future<void> connect() async {
     if (isConnected) {
       LogHelper.info(
         'MongoDB',
         'Sudah terhubung. Tidak perlu inisialisasi ulang.',
+      );
+      dev.log(
+        '[MongoService.connect] Skip connect karena status already connected.',
+        name: 'MongoDB',
+        level: 300,
       );
       return;
     }
@@ -44,17 +54,45 @@ class MongoService {
       }
 
       LogHelper.info('MongoDB', 'Mencoba koneksi ke: $mongoUrl');
+      dev.log(
+        '[MongoService.connect] Sebelum Db.create(), dbName=$dbName, collectionName=$collectionName',
+        name: 'MongoDB',
+        level: 300,
+      );
 
       _db = await Db.create(mongoUrl);
+      dev.log(
+        '[MongoService.connect] Db.create() selesai. Sebelum db.open()',
+        name: 'MongoDB',
+        level: 300,
+      );
+
       await _db!.open();
+      dev.log(
+        '[MongoService.connect] db.open() selesai. isConnected=${_db!.isConnected}',
+        name: 'MongoDB',
+        level: 300,
+      );
 
       _collection = _db!.collection(collectionName);
+      dev.log(
+        '[MongoService.connect] Collection binding selesai untuk: $collectionName',
+        name: 'MongoDB',
+        level: 300,
+      );
 
       LogHelper.success(
         'MongoDB',
         'Berhasil terhubung ke database: $dbName, collection: $collectionName',
       );
     } catch (e, stackTrace) {
+      dev.log(
+        '[MongoService.connect] Exception saat koneksi: $e',
+        name: 'MongoDB',
+        level: 1000,
+        error: e,
+        stackTrace: stackTrace,
+      );
       LogHelper.error('MongoDB', 'Gagal koneksi', e, stackTrace);
       rethrow;
     }
@@ -94,24 +132,52 @@ class MongoService {
   }
 
   Future<List<Map<String, dynamic>>> getAllDocuments() async {
+    return getLogs();
+  }
+
+  // Alias untuk Task 3 requirement
+  Future<List<Map<String, dynamic>>> getLogs() async {
     try {
       LogHelper.info('MongoDB', 'Mengambil semua documents...');
+      dev.log(
+        '[MongoService.getLogs] Sebelum collection.find().toList()',
+        name: 'MongoDB',
+        level: 300,
+      );
 
       final documents = await collection.find().toList();
 
+      dev.log(
+        'JUMLAH DATA MENTAH DARI MONGODB: ${documents.length}',
+        name: 'DEBUG_DB',
+      );
+      dev.log(
+        'ISI DATA PERTAMA: ${documents.isNotEmpty ? documents.first.toString() : 'KOSONG'}',
+        name: 'DEBUG_DB',
+      );
+
+      dev.log(
+        '[MongoService.getLogs] Setelah collection.find().toList(), total=${documents.length}',
+        name: 'MongoDB',
+        level: 300,
+      );
       LogHelper.success(
         'MongoDB',
         'Berhasil mengambil ${documents.length} documents',
       );
       return documents;
     } catch (e, stackTrace) {
+      dev.log(
+        '[MongoService.getLogs] Exception saat mengambil documents: $e',
+        name: 'MongoDB',
+        level: 1000,
+        error: e,
+        stackTrace: stackTrace,
+      );
       LogHelper.error('MongoDB', 'Gagal mengambil documents', e, stackTrace);
       rethrow;
     }
   }
-
-  // Alias untuk Task 3 requirement
-  Future<List<Map<String, dynamic>>> getLogs() => getAllDocuments();
 
   Future<void> updateDocument(ObjectId id, Map<String, dynamic> updates) async {
     try {

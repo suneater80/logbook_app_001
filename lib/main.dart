@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
 import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/helpers/mongo_service.dart';
@@ -34,6 +35,8 @@ void main() async {
       'Running on Web - MongoDB disabled, using local storage only',
     );
   }
+
+  await initializeDateFormatting('id_ID', null);
 
   runApp(const MyApp());
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:logbook_app_001/features/logbook/log_controller.dart';
-import 'package:logbook_app_001/helpers/log_helper.dart';
-import 'package:logbook_app_001/features/logbook/models/log_model.dart';
+import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:logbook_app_001/features/logbook/log_controller.dart';
+import 'package:logbook_app_001/features/logbook/models/log_model.dart';
+import 'package:logbook_app_001/helpers/log_helper.dart';
+import 'package:logbook_app_001/helpers/mongo_service.dart';
 
 class LogView extends StatefulWidget {
   const LogView({super.key});
@@ -16,34 +18,43 @@ class _LogViewState extends State<LogView> {
   final ValueNotifier<String> _searchQuery = ValueNotifier('');
   static const List<String> _categories = ['Pekerjaan', 'Pribadi', 'Urgent'];
 
-  // Key untuk trigger rebuild FutureBuilder (auto-refresh)
-  Key _futureKey = UniqueKey();
+  // Cached future agar FutureBuilder tidak membuat request baru setiap rebuild.
+  late Future<List<LogModel>> _logsFuture;
   bool _isOffline = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _controller = LogController();
+    _logsFuture = _fetchLogs();
   }
 
-  // Trigger refresh dengan membuat key baru
   void _refreshData() {
     setState(() {
-      _futureKey = UniqueKey();
+      _isLoading = true;
+      _logsFuture = _fetchLogs();
     });
   }
 
   Future<List<LogModel>> _fetchLogs() async {
     try {
-      // Coba load dari cloud dengan timeout
-      await _controller.loadFromCloud();
+      if (!MongoService.instance.isConnected) {
+        LogHelper.info(
+          'log_view.dart',
+          'MongoDB belum terhubung, mencoba reconnect sebelum refresh data',
+        );
+        await MongoService.instance.connect().timeout(
+          const Duration(seconds: 12),
+        );
+      }
 
-      // Berhasil terhubung ke cloud
+      await _controller.loadFromCloud().timeout(const Duration(seconds: 12));
+
       if (mounted) {
         setState(() => _isOffline = false);
       }
 
-      // Auto-sync data yang dibuat offline (jika ada)
       final syncedCount = await _controller.syncToCloud();
       if (syncedCount > 0 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,18 +68,15 @@ class _LogViewState extends State<LogView> {
         );
       }
 
-      // Return data dari controller
       final logs = List<LogModel>.from(_controller.logs.value);
       logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
       return logs;
-    } catch (e, stackTrace) {
+    } on TimeoutException {
       LogHelper.warning(
         'log_view.dart',
-        'Cloud tidak tersedia, menggunakan data lokal',
+        'Timeout koneksi cloud, fallback ke mode offline',
       );
 
-      // Fallback ke local storage
       await _controller.loadFromDisk();
 
       if (mounted) {
@@ -77,12 +85,31 @@ class _LogViewState extends State<LogView> {
 
       final logs = List<LogModel>.from(_controller.logs.value);
       logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
       return logs;
+    } catch (e) {
+      LogHelper.warning(
+        'log_view.dart',
+        'Cloud tidak tersedia, menggunakan data lokal',
+      );
+
+      await _controller.loadFromDisk();
+
+      if (mounted) {
+        setState(() => _isOffline = true);
+      }
+
+      final logs = List<LogModel>.from(_controller.logs.value);
+      logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return logs;
+    } finally {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Future<void> _showInputDialog({LogModel? existingLog, int? index}) async {
+    final messenger = ScaffoldMessenger.of(context);
     final titleController = TextEditingController(
       text: existingLog?.title ?? '',
     );
@@ -94,7 +121,7 @@ class _LogViewState extends State<LogView> {
     );
     final isEdit = existingLog != null && index != null;
 
-    await showDialog(
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -123,7 +150,7 @@ class _LogViewState extends State<LogView> {
                 valueListenable: selectedCategory,
                 builder: (context, category, _) {
                   return DropdownButtonFormField<String>(
-                    value: category,
+                    initialValue: category,
                     decoration: const InputDecoration(
                       labelText: 'Kategori',
                       border: OutlineInputBorder(),
@@ -152,69 +179,23 @@ class _LogViewState extends State<LogView> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 final title = titleController.text.trim();
                 final desc = descController.text.trim();
                 final category = selectedCategory.value;
 
                 if (title.isEmpty || desc.isEmpty) {
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Judul dan deskripsi wajib diisi'),
-                    ),
-                  );
+                  Navigator.pop(context, {
+                    'error': 'Judul dan deskripsi wajib diisi',
+                  });
                   return;
                 }
 
-                try {
-                  if (isEdit) {
-                    // Update existing log
-                    await _controller.updateLog(index, title, desc, category);
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            _isOffline
-                                ? 'Aktivitas diperbarui (akan di-sync otomatis saat online)'
-                                : 'Aktivitas berhasil diperbarui',
-                          ),
-                        ),
-                      );
-                    }
-                  } else {
-                    // Add new log
-                    await _controller.addLog(title, desc, category);
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            _isOffline
-                                ? 'Aktivitas ditambahkan (akan di-sync otomatis saat online)'
-                                : 'Aktivitas berhasil ditambahkan',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-
-                  // Auto-refresh UI
-                  _refreshData();
-
-                  if (mounted) {
-                    Navigator.pop(context);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text('Gagal menyimpan: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
+                Navigator.pop(context, {
+                  'title': title,
+                  'desc': desc,
+                  'category': category,
+                });
               },
               child: Text(isEdit ? 'Simpan' : 'Tambah'),
             ),
@@ -223,13 +204,90 @@ class _LogViewState extends State<LogView> {
       },
     );
 
+    if (result == null) {
+      titleController.dispose();
+      descController.dispose();
+      selectedCategory.dispose();
+      return;
+    }
+
+    if (result.containsKey('error')) {
+      if (!mounted) {
+        titleController.dispose();
+        descController.dispose();
+        selectedCategory.dispose();
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(result['error']!)));
+      titleController.dispose();
+      descController.dispose();
+      selectedCategory.dispose();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final title = result['title']!;
+      final desc = result['desc']!;
+      final category = result['category']!;
+
+      if (isEdit) {
+        await _controller.updateLog(index, title, desc, category);
+      } else {
+        await _controller.addLog(title, desc, category);
+      }
+
+      if (!mounted) {
+        titleController.dispose();
+        descController.dispose();
+        selectedCategory.dispose();
+        return;
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            isEdit
+                ? (_isOffline
+                      ? 'Aktivitas diperbarui (akan di-sync otomatis saat online)'
+                      : 'Aktivitas berhasil diperbarui')
+                : (_isOffline
+                      ? 'Aktivitas ditambahkan (akan di-sync otomatis saat online)'
+                      : 'Aktivitas berhasil ditambahkan'),
+          ),
+        ),
+      );
+
+      _refreshData();
+    } catch (e) {
+      if (!mounted) {
+        titleController.dispose();
+        descController.dispose();
+        selectedCategory.dispose();
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
     titleController.dispose();
     descController.dispose();
     selectedCategory.dispose();
   }
 
   Future<void> _confirmDelete(LogModel log, int index) async {
-    await showDialog(
+    final messenger = ScaffoldMessenger.of(context);
+    final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -241,43 +299,49 @@ class _LogViewState extends State<LogView> {
               child: const Text('Batal'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                try {
-                  await _controller.removeLog(index);
-
-                  // Auto-refresh UI
-                  _refreshData();
-
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _isOffline
-                              ? 'Aktivitas dihapus (akan di-sync saat online)'
-                              : 'Aktivitas berhasil dihapus',
-                        ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text('Gagal menghapus: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Hapus'),
             ),
           ],
         );
       },
     );
+
+    if (shouldDelete != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _controller.removeLog(index);
+
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _isOffline
+                ? 'Aktivitas dihapus (akan di-sync saat online)'
+                : 'Aktivitas berhasil dihapus',
+          ),
+        ),
+      );
+
+      _refreshData();
+    } catch (e) {
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal menghapus: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -304,6 +368,12 @@ class _LogViewState extends State<LogView> {
             ),
             const SizedBox(height: 16),
             Text('Data Kosong', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(
+              'Belum ada catatan',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 6),
             Text(
               'Belum ada catatan di MongoDB Atlas.\nTekan tombol + untuk menambahkan aktivitas pertama.',
@@ -346,7 +416,6 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // Format timestamp dengan intl - Homework requirement
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -360,7 +429,6 @@ class _LogViewState extends State<LogView> {
     } else if (difference.inDays < 7) {
       return '${difference.inDays} hari yang lalu';
     } else {
-      // Format: "25 Jan 2026, 14:30"
       return DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(timestamp);
     }
   }
@@ -380,10 +448,7 @@ class _LogViewState extends State<LogView> {
       ),
       body: Column(
         children: [
-          // Banner offline yang subtle, hanya muncul saat offline
           _buildOfflineBanner(),
-
-          // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
             child: ValueListenableBuilder<String>(
@@ -406,15 +471,12 @@ class _LogViewState extends State<LogView> {
               },
             ),
           ),
-
-          // FutureBuilder dengan loading state - Task 3 requirement
           Expanded(
             child: FutureBuilder<List<LogModel>>(
-              key: _futureKey, // Untuk auto-refresh
-              future: _fetchLogs(),
+              future: _logsFuture,
               builder: (context, snapshot) {
-                // Loading State dengan CircularProgressIndicator
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (_isLoading ||
+                    snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -427,7 +489,6 @@ class _LogViewState extends State<LogView> {
                   );
                 }
 
-                // Error State - jarang terjadi karena ada fallback
                 if (snapshot.hasError) {
                   return Center(
                     child: Padding(
@@ -465,7 +526,6 @@ class _LogViewState extends State<LogView> {
 
                 final logs = snapshot.data ?? [];
 
-                // Empty State - "Data Kosong" - Task 3 requirement
                 if (logs.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: () async => _refreshData(),
@@ -479,7 +539,6 @@ class _LogViewState extends State<LogView> {
                   );
                 }
 
-                // Filter by search query
                 return ValueListenableBuilder<String>(
                   valueListenable: _searchQuery,
                   builder: (context, query, _) {
@@ -506,7 +565,6 @@ class _LogViewState extends State<LogView> {
                       );
                     }
 
-                    // Pull-to-Refresh - Homework requirement
                     return RefreshIndicator(
                       onRefresh: () async {
                         _refreshData();
@@ -517,7 +575,6 @@ class _LogViewState extends State<LogView> {
                         itemCount: filteredLogs.length,
                         itemBuilder: (context, index) {
                           final log = filteredLogs[index];
-                          // Cari index asli di list lengkap
                           final originalIndex = logs.indexOf(log);
 
                           return Padding(
@@ -526,6 +583,8 @@ class _LogViewState extends State<LogView> {
                               child: ListTile(
                                 title: Text(
                                   log.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -534,7 +593,11 @@ class _LogViewState extends State<LogView> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 4),
-                                    Text(log.description),
+                                    Text(
+                                      log.description,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
@@ -544,37 +607,46 @@ class _LogViewState extends State<LogView> {
                                           color: Colors.grey.shade600,
                                         ),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          _formatTimestamp(log.timestamp),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: _getCategoryColor(
-                                              log.category,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
+                                        Expanded(
                                           child: Text(
-                                            log.category,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w500,
+                                            _formatTimestamp(log.timestamp),
+                                            maxLines: 2,
+                                            softWrap: true,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
                                             ),
                                           ),
                                         ),
                                       ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getCategoryColor(
+                                            log.category,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          log.category,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
