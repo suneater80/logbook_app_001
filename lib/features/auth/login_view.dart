@@ -103,7 +103,7 @@ class _LoginViewState extends State<LoginView> {
         });
         return false; // hentikan loop
       }
-      
+
       return true; // lanjutkan loop
     });
   }
@@ -129,13 +129,14 @@ class _LoginViewState extends State<LoginView> {
                 //membuat ikon mata
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _isPasswordVisible 
-                    ? Icons.visibility 
-                    : Icons.visibility_off,
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                   ),
                   onPressed: () {
                     setState(() {
-                      _isPasswordVisible = !_isPasswordVisible; // Toggle visibility
+                      _isPasswordVisible =
+                          !_isPasswordVisible; // Toggle visibility
                     });
                   },
                 ),
@@ -146,9 +147,8 @@ class _LoginViewState extends State<LoginView> {
             ElevatedButton(
               onPressed: _isButtonDisabled ? null : _handleLogin,
               child: Text(
-                _isButtonDisabled 
-                ? "Tunggu $_remainingTime detik" 
-                : "Masuk"),
+                _isButtonDisabled ? "Tunggu $_remainingTime detik" : "Masuk",
+              ),
             ),
           ],
         ),

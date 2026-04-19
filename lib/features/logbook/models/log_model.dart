@@ -1,19 +1,55 @@
+import 'package:hive/hive.dart';
 import 'package:mongo_dart/mongo_dart.dart' show ObjectId;
 
+part 'log_model.g.dart';
+
+@HiveType(typeId: 0)
 class LogModel {
+  @HiveField(0)
   final ObjectId? id;
+  @HiveField(1)
   final String title;
+  @HiveField(2)
   final String description;
-  final DateTime timestamp;
-  final String category;
+  @HiveField(3)
+  final DateTime date;
+  @HiveField(4)
+  final String authorId;
+  @HiveField(5)
+  final String teamId;
+  @HiveField(6)
+  final bool isPublic;
 
   LogModel({
     this.id,
     required this.title,
     required this.description,
-    required this.timestamp,
-    required this.category,
-  });
+    DateTime? date,
+    String? authorId,
+    String? teamId,
+    bool? isPublic,
+    DateTime? timestamp,
+    String? category,
+  }) : date = date ?? timestamp ?? DateTime.now(),
+       authorId = authorId ?? '',
+       teamId = teamId ?? category ?? '',
+       isPublic = isPublic ?? false,
+       assert(
+         date == null || timestamp == null || date.isAtSameMomentAs(timestamp),
+         'Provide only one of date or timestamp.',
+       ),
+       assert(
+         teamId == null || category == null || teamId == category,
+         'Provide only one of teamId or category.',
+       );
+
+  DateTime get timestamp => date;
+  String get category => teamId;
+
+  static String _parseString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    return value.toString();
+  }
 
   static ObjectId? _parseObjectId(dynamic value) {
     if (value == null) return null;
@@ -45,8 +81,13 @@ class LogModel {
       id: _parseObjectId(map['id'] ?? map['_id']),
       title: (map['title'] ?? '') as String,
       description: (map['description'] ?? '') as String,
-      timestamp: _parseTimestamp(map['timestamp']),
-      category: (map['category'] ?? 'Pribadi') as String,
+      date: _parseTimestamp(map['date'] ?? map['timestamp']),
+      authorId: _parseString(map['authorId'] ?? map['author_id']),
+      teamId: _parseString(
+        map['teamId'] ?? map['category'],
+        fallback: 'Pribadi',
+      ),
+      isPublic: (map['isPublic'] as bool?) ?? false,
     );
   }
 
@@ -55,8 +96,12 @@ class LogModel {
       'id': id?.oid,
       'title': title,
       'description': description,
-      'timestamp': timestamp.toIso8601String(),
-      'category': category,
+      'date': date.toIso8601String(),
+      'authorId': authorId,
+      'teamId': teamId,
+      'isPublic': isPublic,
+      'timestamp': date.toIso8601String(),
+      'category': teamId,
     };
   }
 
@@ -66,8 +111,13 @@ class LogModel {
       id: _parseObjectId(doc['_id']),
       title: (doc['title'] ?? '') as String,
       description: (doc['description'] ?? '') as String,
-      timestamp: _parseTimestamp(doc['timestamp']),
-      category: (doc['category'] ?? 'Pribadi') as String,
+      date: _parseTimestamp(doc['date'] ?? doc['timestamp']),
+      authorId: _parseString(doc['authorId'] ?? doc['author_id']),
+      teamId: _parseString(
+        doc['teamId'] ?? doc['category'],
+        fallback: 'Pribadi',
+      ),
+      isPublic: (doc['isPublic'] as bool?) ?? false,
     );
   }
 
@@ -75,8 +125,12 @@ class LogModel {
     final data = <String, dynamic>{
       'title': title,
       'description': description,
-      'timestamp': timestamp, // simpan DateTime langsung untuk BSON
-      'category': category,
+      'date': date,
+      'authorId': authorId,
+      'teamId': teamId,
+      'isPublic': isPublic,
+      'timestamp': date,
+      'category': teamId,
     };
 
     if (id != null) {
@@ -84,5 +138,20 @@ class LogModel {
     }
 
     return data;
+  }
+}
+
+class ObjectIdAdapter extends TypeAdapter<ObjectId> {
+  @override
+  final int typeId = 1;
+
+  @override
+  ObjectId read(BinaryReader reader) {
+    return ObjectId.fromHexString(reader.readString());
+  }
+
+  @override
+  void write(BinaryWriter writer, ObjectId obj) {
+    writer.writeString(obj.oid);
   }
 }

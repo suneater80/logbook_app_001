@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logbook_app_001/features/auth/login_view.dart';
 import 'package:logbook_app_001/features/logbook/counter_controller.dart';
 import 'package:logbook_app_001/features/logbook/log_view.dart';
-import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
+import 'package:logbook_app_001/features/logbook/models/log_model.dart';
 
 class CounterView extends StatefulWidget {
   // Tambahkan variabel final untuk menampung nama
@@ -13,6 +15,21 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
+  String _resolveRole(String username) {
+    if (username.trim().toLowerCase() == 'admin') {
+      return 'Ketua';
+    }
+    return 'Anggota';
+  }
+
+  String _resolveTeamId(String username) {
+    final normalized = username.trim().toLowerCase();
+    if (normalized == 'admin' || normalized == 'hakim') {
+      return 'team_alpha';
+    }
+    return 'team_beta';
+  }
+
   // Fungsi greeting berdasarkan waktu
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -93,8 +110,8 @@ class _CounterViewState extends State<CounterView> {
             onPressed: () async {
               await _onReset();
               if (!mounted) return;
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
+              Navigator.of(this.context).pop();
+              ScaffoldMessenger.of(this.context).showSnackBar(
                 const SnackBar(content: Text("Nilai berhasil direset")),
               );
             },
@@ -120,18 +137,26 @@ class _CounterViewState extends State<CounterView> {
             icon: const Icon(Icons.note_alt_outlined),
             tooltip: 'Buka Log CRUD',
             onPressed: () {
+              final currentRole = _resolveRole(widget.username);
+              final currentTeamId = _resolveTeamId(widget.username);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const LogView()),
+                MaterialPageRoute(
+                  builder: (context) => LogView(
+                    currentUserUid: widget.username,
+                    currentUserRole: currentRole,
+                    currentUserTeamId: currentTeamId,
+                  ),
+                ),
               );
             },
           ),
           IconButton(
             // Logout
             icon: const Icon(Icons.logout),
-            onPressed: () {
+            onPressed: () async {
               // 1. Munculkan Dialog Konfirmasi
-              showDialog(
+              final shouldLogout = await showDialog<bool>(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
@@ -148,15 +173,20 @@ class _CounterViewState extends State<CounterView> {
                       ),
                       // Tombol Ya, Logout
                       TextButton(
-                        onPressed: () {
-                          // Menutup dialog
-                          Navigator.pop(context);
+                        onPressed: () async {
+                          // 1. Tangkap navigator sebelum kena efek async
+                          final navigator = Navigator.of(context);
 
-                          // 2. Navigasi kembali ke Onboarding (Membersihkan Stack)
-                          Navigator.pushAndRemoveUntil(
-                            context,
+                          // 2. Tutup dialog pop-up konfirmasi
+                          navigator.pop();
+
+                          // 3. Bersihkan sisa data di laci memori lokal
+                          await Hive.box<LogModel>('offline_logs').clear();
+
+                          // 4. Pergi ke halaman Login
+                          navigator.pushAndRemoveUntil(
                             MaterialPageRoute(
-                              builder: (context) => const OnboardingView(),
+                              builder: (context) => const LoginView(),
                             ),
                             (route) => false,
                           );
@@ -170,6 +200,8 @@ class _CounterViewState extends State<CounterView> {
                   );
                 },
               );
+
+              if (shouldLogout != true) return;
             },
           ),
         ],
@@ -267,8 +299,9 @@ class _CounterViewState extends State<CounterView> {
               children: _controller.history.map((log) {
                 // Memisahkan String berdasarkan karakter '|'
                 final parts = log.split('|');
-                if (parts.length < 2)
+                if (parts.length < 2) {
                   return const SizedBox(); // Jika format tidak sesuai, lewati log ini
+                }
                 final String type = parts[0];
                 final String message = parts[1];
 

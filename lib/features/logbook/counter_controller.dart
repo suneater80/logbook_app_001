@@ -2,16 +2,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class CounterController {
   int _counter = 0; // Variabel private untuk menyimpan nilai counter
-  int _step = 1;    // Variabel private untuk menyimpan nilai step
+  int _step = 1; // Variabel private untuk menyimpan nilai step
   final List<String> _history = []; // List private untuk menampung history
 
   // Getter untuk memberikan akses baca ke View
   int get value => _counter;
   int get step => _step;
-  List<String> get history => List.unmodifiable(_history); // Memberikan akses read-only ke history
+  List<String> get history =>
+      List.unmodifiable(_history); // Memberikan akses read-only ke history
 
-  static String _counterKey(String username) => "counter_$username"; // Key untuk SharedPreferences berdasarkan username
-  
+  static String _counterKey(String username) =>
+      "counter_$username"; // Key untuk SharedPreferences berdasarkan username
+
   static String _historyKey(String username) => 'history_$username';
 
   Future<void> loadCounter(String username) async {
@@ -20,8 +22,8 @@ class CounterController {
 
     // Memuat history dari SharedPreferences
     final savedHistory = prefs.getStringList(_historyKey(username)) ?? [];
-  _history.clear();
-  _history.addAll(savedHistory);
+    _history.clear();
+    _history.addAll(savedHistory);
   }
 
   Future<void> _saveCounter(String username) async {
@@ -36,7 +38,9 @@ class CounterController {
 
   // Fungsi untuk mengubah nilai step berdasarkan input User
   void setStep(int newValue) {
-    _step = newValue <= 0 ? 1 : newValue; // Pastikan step tidak negatif atau nol
+    _step = newValue <= 0
+        ? 1
+        : newValue; // Pastikan step tidak negatif atau nol
   }
 
   String _timeNow() {
@@ -63,11 +67,7 @@ class CounterController {
   // Fungsi-fungsi utama untuk Step dan Log
   Future<void> increment(String username) async {
     _counter += _step;
-    _addLog(
-      username: username,
-      actionText: "menambah +$_step",
-      type: "POS",
-    );
+    _addLog(username: username, actionText: "menambah +$_step", type: "POS");
     await _saveCounter(username);
     await _saveHistory(username);
   }
@@ -75,11 +75,7 @@ class CounterController {
   Future<void> decrement(String username) async {
     final dec = _counter >= _step ? _step : _counter;
     _counter -= dec;
-    _addLog(
-      username: username,
-      actionText: "mengurangi -$dec",
-      type: "NEG",
-    );
+    _addLog(username: username, actionText: "mengurangi -$dec", type: "NEG");
     await _saveCounter(username);
     await _saveHistory(username);
   }

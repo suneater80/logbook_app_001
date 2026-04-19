@@ -7,7 +7,8 @@ class LoginController {
   };
   // Fungsi pengecekan dengan Map
   bool login(String username, String password) {
-    if (_validUsers.containsKey(username) && _validUsers[username] == password) {
+    if (_validUsers.containsKey(username) &&
+        _validUsers[username] == password) {
       return true;
     }
     return false;

@@ -131,21 +131,23 @@ class MongoService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getAllDocuments() async {
-    return getLogs();
+  Future<List<Map<String, dynamic>>> getAllDocuments(String teamId) async {
+    return getLogs(teamId);
   }
 
   // Alias untuk Task 3 requirement
-  Future<List<Map<String, dynamic>>> getLogs() async {
+  Future<List<Map<String, dynamic>>> getLogs(String teamId) async {
     try {
-      LogHelper.info('MongoDB', 'Mengambil semua documents...');
+      LogHelper.info('MongoDB', 'Mengambil documents untuk teamId: $teamId');
       dev.log(
         '[MongoService.getLogs] Sebelum collection.find().toList()',
         name: 'MongoDB',
         level: 300,
       );
 
-      final documents = await collection.find().toList();
+      final documents = await collection
+          .find(where.eq('teamId', teamId))
+          .toList();
 
       dev.log(
         'JUMLAH DATA MENTAH DARI MONGODB: ${documents.length}',
@@ -188,6 +190,10 @@ class MongoService {
         modify
             .set('title', updates['title'])
             .set('description', updates['description'])
+            .set('date', updates['date'])
+            .set('authorId', updates['authorId'])
+            .set('teamId', updates['teamId'])
+            .set('isPublic', updates['isPublic'])
             .set('timestamp', updates['timestamp'])
             .set('category', updates['category']),
       );

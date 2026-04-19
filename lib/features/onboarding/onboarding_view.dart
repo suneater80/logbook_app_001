@@ -19,17 +19,20 @@ class _OnboardingViewState extends State<OnboardingView> {
     OnboardingData(
       image: 'assets/images/onboarding1.png',
       title: 'Selamat Datang',
-      description: 'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
+      description:
+          'Aplikasi LogBook membantu Anda mencatat setiap aktivitas dengan mudah dan rapi.',
     ),
     OnboardingData(
       image: 'assets/images/onboarding2.jpg',
       title: 'Kelola Counter',
-      description: 'Tambah atau kurangi nilai counter dengan langkah yang dapat disesuaikan.',
+      description:
+          'Tambah atau kurangi nilai counter dengan langkah yang dapat disesuaikan.',
     ),
     OnboardingData(
       image: 'assets/images/onboarding3.jpg',
       title: 'Pantau Riwayat',
-      description: 'Lihat semua aktivitas Anda dalam riwayat yang terorganisir dengan baik.',
+      description:
+          'Lihat semua aktivitas Anda dalam riwayat yang terorganisir dengan baik.',
     ),
   ];
 
@@ -61,9 +64,7 @@ class _OnboardingViewState extends State<OnboardingView> {
               },
               itemCount: _onboardingList.length,
               itemBuilder: (context, index) {
-                return _buildOnboardingPage(
-                  _onboardingList[index],
-                );
+                return _buildOnboardingPage(_onboardingList[index]);
               },
             ),
           ),
@@ -93,7 +94,12 @@ class _OnboardingViewState extends State<OnboardingView> {
                 // Tombol Skip
                 TextButton(
                   onPressed: () {
-                    _pageController.jumpToPage(_onboardingList.length - 1);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginView(),
+                      ),
+                    );
                   },
                   child: const Text('Skip'),
                 ),
@@ -139,21 +145,13 @@ class _OnboardingViewState extends State<OnboardingView> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Gambar
-          Image.asset(
-            data.image,
-            height: 300,
-            width: 300,
-            fit: BoxFit.contain,
-          ),
+          Image.asset(data.image, height: 300, width: 300, fit: BoxFit.contain),
           const SizedBox(height: 40),
 
           // Judul
           Text(
             data.title,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
